@@ -1,4 +1,4 @@
-import { serve } from '@hono/node-server';
+import { serve, type ServerType } from '@hono/node-server';
 import { APP_NAME, DATA_DIR, HOST, PORT, VERSION } from './config.js';
 import { closeDb, getSettings, initDb, listModels, listProviders, pruneRequests } from './db.js';
 import { log } from './logger.js';
@@ -24,7 +24,7 @@ const server = serve({ fetch: app.fetch, hostname: HOST, port: PORT }, (info) =>
     `  ─────────────────────────────────────────────`,
     `  Dashboard   http://localhost:${info.port}`,
     `  Gateway     http://localhost:${info.port}/v1`,
-    `  Bound to    ${HOST}:${info.port}${HOST === '127.0.0.1' ? ' (localhost only)' : ' (network exposed)'}`,
+    `  Bound to    ${HOST}:${info.port}${HOST === '127.0.0.1' || HOST === 'localhost' ? ' + [::1] (localhost only)' : ' (network exposed)'}`,
     `  Data        ${DATA_DIR}`,
     `  Providers   ${providers.filter((p) => p.active).length} active · ${models.length} enabled models`,
     `  API key     ${settings.requireApiKey ? 'required for /v1' : 'not required for /v1 (localhost)'}`,
@@ -34,6 +34,20 @@ const server = serve({ fetch: app.fetch, hostname: HOST, port: PORT }, (info) =>
   process.stdout.write(lines.join('\n') + '\n');
   log.info('server.started', { port: info.port, host: HOST, version: VERSION });
 });
+
+const servers: ServerType[] = [server];
+
+// Clients such as Claude Code may resolve `localhost` to ::1 first. Listen on the IPv6
+// loopback too so both address families work without exposing anything externally.
+if (PORT !== 0 && HOST !== '::' && HOST !== '::1') {
+  try {
+    const ipv6 = serve({ fetch: app.fetch, hostname: '::1', port: PORT }, () => log.debug('server.ipv6_listening', { port: PORT }));
+    ipv6.on('error', (err: NodeJS.ErrnoException) => log.debug('server.ipv6_unavailable', { code: err.code ?? 'unknown' }));
+    servers.push(ipv6);
+  } catch (err) {
+    log.debug('server.ipv6_unavailable', { reason: err instanceof Error ? err.message : String(err) });
+  }
+}
 
 const pruneTimer = setInterval(
   () => {
@@ -54,7 +68,7 @@ async function shutdown(signal: string) {
   stopHealthLoop();
   const force = setTimeout(() => process.exit(0), 5000);
   force.unref?.();
-  await new Promise<void>((resolve) => server.close(() => resolve()));
+  await Promise.all(servers.map((item) => new Promise<void>((resolve) => item.close(() => resolve()))));
   closeDb();
   process.exit(0);
 }

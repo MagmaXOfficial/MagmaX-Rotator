@@ -191,7 +191,7 @@ Claude Code needs an Anthropic-compatible base URL. Under **Integrations** you c
 
 ```bash
 # bash / zsh
-export ANTHROPIC_BASE_URL="http://localhost:3000"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:3000"
 export ANTHROPIC_AUTH_TOKEN="<router API key from Settings>"
 export ANTHROPIC_MODEL="claude-sonnet-4-5"       # alias mapped to any routed model
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-haiku-4-5"
@@ -200,7 +200,7 @@ export ANTHROPIC_SMALL_FAST_MODEL="claude-haiku-4-5"   # legacy clients
 
 ```powershell
 # PowerShell (Windows)
-$env:ANTHROPIC_BASE_URL = "http://localhost:3000"
+$env:ANTHROPIC_BASE_URL = "http://127.0.0.1:3000"
 $env:ANTHROPIC_AUTH_TOKEN = "<router API key from Settings>"
 $env:ANTHROPIC_MODEL = "claude-sonnet-4-5"
 $env:ANTHROPIC_DEFAULT_HAIKU_MODEL = "claude-haiku-4-5"
@@ -347,6 +347,9 @@ Everything is rate limited or cooling down. Open **Router** to see cooldowns and
 
 **Claude Code still talks to Anthropic**
 Environment variables are not applied. Restart the terminal/IDE, or use **Integrations → Apply to settings.json**. Confirm `ANTHROPIC_BASE_URL` has no `/v1` suffix.
+
+**ECONNREFUSED when connecting**
+Nothing is listening at that address. Start the gateway (`magmaxrotator status`, then `magmaxrotator start`) and prefer `http://127.0.0.1:3000` over `localhost`: the server listens on both IPv4 and IPv6 loopback, but a proxy or a client that resolves `localhost` to `::1` can still pick the wrong family. If a system proxy is configured, add `NO_PROXY=localhost,127.0.0.1`. Inside WSL, `127.0.0.1` is the WSL VM — use the Windows host IP, or run the gateway inside WSL.
 
 **Ollama/LM Studio won’t connect**
 Start the runtime and confirm its port. Keyless local providers still need to be running; “Test” shows the connection error.

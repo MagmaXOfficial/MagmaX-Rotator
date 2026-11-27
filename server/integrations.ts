@@ -5,7 +5,8 @@ import { HOME_DIR, PORT } from './config.js';
 import { getSettings, listModels, listProviders } from './db.js';
 
 export function localBaseUrl(): string {
-  return `http://localhost:${PORT}`;
+  // 127.0.0.1 avoids clients that resolve localhost to ::1 before IPv4.
+  return `http://127.0.0.1:${PORT}`;
 }
 
 function home(): string {
