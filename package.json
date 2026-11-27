@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "MagmaX Rotator — universal local AI gateway with intelligent multi-provider failover",
+  "bin": {
+    "magmaxrotator": "bin/magmaxrotator.mjs"
+  },
   "engines": {
     "node": ">=22.5.0"
   },

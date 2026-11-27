@@ -33,6 +33,24 @@ npm run dev                          # server with watch mode (dashboard from th
 npm run dev:web                      # Vite dev server with HMR on :5173 (proxies the API)
 ```
 
+### Background control commands
+
+Install the `magmaxrotator` command once, then start/stop the gateway like a service:
+
+```bash
+npm link              # or: npm install -g .
+magmaxrotator start
+magmaxrotator status
+magmaxrotator restart
+magmaxrotator stop
+```
+
+`start` builds when needed and runs the server in the background, writing its PID to `data/magmax.pid` and logs to `logs/server.log`. Options: `--port <n>`, `--host <addr>` (also `MAGMAX_PORT` / `MAGMAX_HOST`).
+
+No global install needed: from the project folder use `node bin/magmaxrotator.mjs start`, or on Windows ``.\magmaxrotator.cmd start``. If `npm link` needs administrator rights, `npm install -g .` is equivalent; if PowerShell blocks the npm `.ps1` shim, call `magmaxrotator.cmd start`.
+
+Foreground `npm start` remains available; `magmaxrotator stop` also stops a foreground server when it can identify it through `/api/status` (otherwise press Ctrl+C in that terminal).
+
 Everything is stored under `./data` (SQLite database, encryption key, installed skills). Override with `MAGMAX_DATA_DIR`.
 
 ### First run
