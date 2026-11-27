@@ -53,26 +53,36 @@ export function openCodeConfig(): Record<string, unknown> {
   const settings = getSettings();
   const models = listModels({ enabledOnly: true });
   const modelMap: Record<string, unknown> = {
-    'magmax-auto': { name: 'MagmaX Auto (automatic failover)' },
+    'magmax-auto': {
+      name: 'MagmaX Auto (automatic failover)',
+      capabilities: { tools: true, input: ['text'], output: ['text'] },
+    },
   };
   for (const model of models.slice(0, 40)) {
-    modelMap[`${model.modelId}`] = { name: `${model.modelId} · ${model.providerRowId}` };
+    const limit: Record<string, number> = {};
+    if (model.contextWindow) limit.context = model.contextWindow;
+    if (model.maxOutput) limit.output = model.maxOutput;
+    modelMap[`${model.modelId}`] = {
+      name: `${model.modelId} · ${model.providerRowId}`,
+      capabilities: { tools: true, input: ['text'], output: ['text'] },
+      ...(Object.keys(limit).length ? { limit } : {}),
+    };
   }
   return {
     $schema: 'https://opencode.ai/config.json',
-    provider: {
+    model: 'magmax/magmax-auto',
+    providers: {
       magmax: {
-        npm: '@ai-sdk/openai-compatible',
         name: 'MagmaX Rotator',
-        options: {
+        package: '@opencode/ai/providers/openai-compatible',
+        settings: {
           baseURL: `${localBaseUrl()}/v1`,
           apiKey: settings.apiKey,
-          headers: { 'X-MagMax-Client': 'opencode' },
         },
+        headers: { 'X-MagMax-Client': 'opencode' },
         models: modelMap,
       },
     },
-    model: 'magmax/magmax-auto',
   };
 }
 
@@ -117,8 +127,12 @@ export function detectIntegrations(): IntegrationStatus[] {
   let openDetail = 'No OpenCode config found';
   if (fs.existsSync(openPath)) {
     try {
-      const json = JSON.parse(fs.readFileSync(openPath, 'utf8')) as { provider?: Record<string, { options?: { baseURL?: string } }> };
-      openConfigured = Boolean(json.provider?.magmax?.options?.baseURL?.includes('/v1'));
+      const json = JSON.parse(fs.readFileSync(openPath, 'utf8')) as {
+        provider?: Record<string, { options?: { baseURL?: string } }>;
+        providers?: Record<string, { settings?: { baseURL?: string } }>;
+      };
+      const base = json.providers?.magmax?.settings?.baseURL ?? json.provider?.magmax?.options?.baseURL ?? '';
+      openConfigured = base.includes('/v1');
       openDetail = openConfigured ? 'Custom provider "magmax" is configured' : 'OpenCode config exists without a magmax provider';
     } catch {
       openDetail = 'OpenCode config exists but is not valid JSON';
@@ -176,8 +190,9 @@ export function applyClaudeCode(opts: { dryRun?: boolean } = {}): ApplyResult {
 export function applyOpenCode(opts: { dryRun?: boolean } = {}): ApplyResult {
   const file = openCodeConfigPath();
   const existing = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, 'utf8') || '{}') as Record<string, unknown>) : {};
-  const existingProvider = (existing.provider ?? {}) as Record<string, unknown>;
-  const merged = { ...existing, provider: { ...existingProvider, magmax: (openCodeConfig() as { provider: Record<string, unknown> }).provider.magmax }, model: 'magmax/magmax-auto' };
+  const existingProviders = (existing.providers ?? {}) as Record<string, unknown>;
+  const generated = (openCodeConfig() as { providers: Record<string, unknown> }).providers;
+  const merged = { ...existing, providers: { ...existingProviders, magmax: generated.magmax }, model: 'magmax/magmax-auto' };
   const preview = JSON.stringify(merged, null, 2);
   if (opts.dryRun) return { ok: true, path: file, wrote: false, message: 'Preview only', preview };
   try {

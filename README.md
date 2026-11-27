@@ -215,24 +215,42 @@ The base URL **must not** include `/v1`; Claude Code appends `/v1/messages`. Mod
 
 ## OpenCode
 
-OpenCode supports custom OpenAI-compatible providers. The generated `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`) contains:
+OpenCode v2 supports custom OpenAI-compatible providers. Install it on Windows with the standalone binary (npm package managers are not supported there by OpenCode):
+
+```powershell
+$dest = "$HOME\opencode"
+New-Item -ItemType Directory -Force $dest | Out-Null
+Invoke-WebRequest -Uri "https://opencode.ai/update/api/latest/cli/opencode/opencode-windows-x64.zip" -OutFile "$env:TEMP\opencode.zip"
+Expand-Archive "$env:TEMP\opencode.zip" -DestinationPath $dest -Force
+$env:Path = "$dest;$env:Path"
+opencode --version
+```
+
+The generated `~/.config/opencode/opencode.json` (Windows: `C:\Users\<you>\.config\opencode\opencode.json`, or under `$XDG_CONFIG_HOME`) uses the v2 `providers` format:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "provider": {
+  "model": "magmax/magmax-auto",
+  "providers": {
     "magmax": {
-      "npm": "@ai-sdk/openai-compatible",
       "name": "MagmaX Rotator",
-      "options": { "baseURL": "http://localhost:3000/v1", "apiKey": "<router API key>" },
-      "models": { "magmax-auto": { "name": "MagmaX Auto (automatic failover)" } }
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": { "baseURL": "http://127.0.0.1:3000/v1", "apiKey": "<router API key>" },
+      "models": {
+        "magmax-auto": {
+          "name": "MagmaX Auto (automatic failover)",
+          "capabilities": { "tools": true, "input": ["text"], "output": ["text"] }
+        }
+      }
     }
-  },
-  "model": "magmax/magmax-auto"
+  }
 }
 ```
 
-`magmax-auto` routes automatically; registered model ids force that model. Streaming and tool calling are the standard OpenAI semantics passed through by the gateway.
+`magmax-auto` routes automatically; registered model ids force that model. Streaming and tool calling are the standard OpenAI semantics passed through by the gateway. For OpenCode v1, the equivalent block is `provider.magmax` with `npm: "@ai-sdk/openai-compatible"` and `options.baseURL` instead of `package` and `settings`.
+
+Apply it from **Integrations → Apply to opencode.json**, then run `opencode`, use `/models` and pick **MagmaX Rotator → MagmaX Auto**.
 
 ---
 
