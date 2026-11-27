@@ -164,6 +164,18 @@ async function start() {
   }
   if (recorded) clearPid();
 
+  // A server started in the foreground has no PID file; recognise it before calling the port busy.
+  const discovered = await readStatus();
+  if (discovered?.app?.pid && isAlive(discovered.app.pid)) {
+    writePid(discovered.app.pid);
+    console.log('MagmaX Rotator is already running');
+    console.log(`  Dashboard  ${baseUrl}`);
+    console.log(`  Gateway    ${baseUrl}/v1`);
+    console.log(`  PID        ${discovered.app.pid}`);
+    console.log(`  Logs       ${path.relative(root, logFile) || logFile}`);
+    return 0;
+  }
+
   if (await probePort()) {
     console.error(`Port ${port} is already in use by another process. Stop it, or run with --port <other>.`);
     return 1;
