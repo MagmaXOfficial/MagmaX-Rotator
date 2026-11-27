@@ -190,13 +190,26 @@ Set any model name: an exact model id, an alias, or `auto` for pure chain order.
 Claude Code needs an Anthropic-compatible base URL. Under **Integrations** you can preview and write the config, or set it manually:
 
 ```bash
+# bash / zsh
 export ANTHROPIC_BASE_URL="http://localhost:3000"
 export ANTHROPIC_AUTH_TOKEN="<router API key from Settings>"
 export ANTHROPIC_MODEL="claude-sonnet-4-5"       # alias mapped to any routed model
-export ANTHROPIC_SMALL_FAST_MODEL="claude-haiku-4-5"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-haiku-4-5"
+export ANTHROPIC_SMALL_FAST_MODEL="claude-haiku-4-5"   # legacy clients
 ```
 
-The base URL **must not** include `/v1`; Claude Code appends `/v1/messages`. “Apply to settings.json” merges these into `~/.claude/settings.json` and keeps a `.magmax-backup` copy. Model names sent by Claude Code are matched against your aliases (Models → aliases) or exact model ids; unmatched names route automatically.
+```powershell
+# PowerShell (Windows)
+$env:ANTHROPIC_BASE_URL = "http://localhost:3000"
+$env:ANTHROPIC_AUTH_TOKEN = "<router API key from Settings>"
+$env:ANTHROPIC_MODEL = "claude-sonnet-4-5"
+$env:ANTHROPIC_DEFAULT_HAIKU_MODEL = "claude-haiku-4-5"
+$env:ANTHROPIC_SMALL_FAST_MODEL = "claude-haiku-4-5"
+```
+
+`ANTHROPIC_AUTH_TOKEN` is sent as `Authorization: Bearer`, which is what this router checks. If router API-key auth is disabled, any non-empty value works. Prefer **Integrations → Apply to settings.json** for persistence: it merges the `env` block into `~/.claude/settings.json` (Windows: `C:\Users\<you>\.claude\settings.json`) and keeps a `.magmax-backup` copy.
+
+The base URL **must not** include `/v1`; Claude Code appends `/v1/messages`. Model names sent by Claude Code are matched against your aliases (Models → aliases) or exact model ids; unmatched names route automatically, so creating aliases for `claude-sonnet-4-5`, `claude-haiku-4-5` and `claude-opus-4-1` keeps Claude Code's own names working. Anthropic does not officially support routing Claude Code to non-Claude models; the gateway implements the documented protocol, but client-side features may vary by model.
 
 **Verified in this build:** Anthropic Messages requests, SSE streaming, tool_use/tool_result round-tripping, system prompts and model aliases through the gateway. **Not verified:** every Claude Code feature (e.g. its internal 1M-context flags) — these are forwarded as ordinary requests, not specially emulated.
 

@@ -36,6 +36,7 @@ export function claudeCodeEnv(): Record<string, string> {
     ANTHROPIC_BASE_URL: localBaseUrl(),
     ANTHROPIC_AUTH_TOKEN: authToken(),
     ANTHROPIC_MODEL: modelName,
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: modelName,
     ANTHROPIC_SMALL_FAST_MODEL: modelName,
   };
 }
@@ -224,10 +225,11 @@ export async function verifyIntegrations(): Promise<VerifyResult[]> {
     }
   };
   await check('OpenAI /v1/models', `${localBaseUrl()}/v1/models`);
-  await check('Anthropic /v1/messages', `${localBaseUrl()}/v1/messages`, {
+  // count_tokens validates the Anthropic route, headers and auth without running inference.
+  await check('Anthropic /v1/messages', `${localBaseUrl()}/v1/messages/count_tokens`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'magmax-auto', max_tokens: 8, messages: [] }),
+    body: JSON.stringify({ model: 'magmax-auto', messages: [{ role: 'user', content: 'connection check' }] }),
   });
   return results;
 }
